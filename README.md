@@ -2,8 +2,8 @@
 
 Demo full-stack e-commerce storefront ("COCKPIT STORE 360") built with TanStack
 Start + SQLite (`better-sqlite3`). Dark-only single page: hero, product catalog,
-an order-tracking "antes/depois" demo, and the AI Cockpit flow. A fictional demo
-for pre-sales and training — not an official product.
+the order-tracking "antes da melhoria" demo, and the AI Cockpit flow. A fictional
+demo for pre-sales and training — not an official product.
 
 ## Scripts
 
@@ -23,8 +23,7 @@ plugin (`src/server/apiPlugin.ts`) and the production Express router
 (`src/server/index.ts`), so behavior is identical in dev and prod.
 
 - `GET /api/products` — 3 seeded products (Orbit, Pulse, Wave; `created_at ASC`).
-- `GET /api/orders/:id` — order + events; `404` with a pt-BR not-found message.
-- `POST /api/orders/:id/advance` — advances `current_step`, wrapping to 0 at the end.
+- `GET /api/orders/:id` — minimal order lookup; `404` with a pt-BR not-found message.
 - `POST /api/reset-seed` — re-seeds, returns `{ success, products, order }`.
 
 SQLite lives at `data/store.db` (gitignored, seeded on first run).

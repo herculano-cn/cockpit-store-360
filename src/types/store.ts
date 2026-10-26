@@ -8,18 +8,6 @@ export interface Product {
   createdAt: string
 }
 
-export type OrderEventStatus = 'done' | 'current' | 'pending'
-
-export interface OrderEvent {
-  stepIndex: number
-  title: string
-  detail: string
-  // Server-computed display value: done/current steps show `detail`, pending
-  // steps show the literal 'Aguardando atualização' (mockup renderTimeline branch).
-  displayDetail: string
-  status: OrderEventStatus
-}
-
 export interface OrderWithEvents {
   id: string
   productId: string
@@ -28,8 +16,7 @@ export interface OrderWithEvents {
   quantity: number
   total: number
   placedAt: string
-  currentStep: number
-  // events[currentStep].title — the status badge text
+  // Fixed before-state badge 'Pedido confirmado' (the mockup's hardcoded
+  // before-mode status). No longer derived from events[currentStep].title.
   statusLabel: string
-  events: OrderEvent[]
 }

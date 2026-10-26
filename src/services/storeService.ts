@@ -1,14 +1,10 @@
-import type { OrderEvent, OrderWithEvents, Product } from '../types/store'
+import type { OrderWithEvents, Product } from '../types/store'
 
 // R3-3: pinned localStorage keys. The API is the source of truth; successful
 // responses are mirrored to these keys and read back only when the API fails.
 const PRODUCTS_STORAGE_KEY = 'cockpit_store_products_v1'
 const ORDER_STORAGE_KEY = 'cockpit_store_order_v1'
 const DATA_CHANGE_EVENT = 'cockpit_store_data_change'
-
-const NOT_FOUND_MESSAGE = 'Pedido não localizado neste ambiente de demonstração.'
-const FOUND_MESSAGE = 'Pedido CS-2048 encontrado. Os dados exibidos são fictícios.'
-const AWAITING_DETAIL = 'Aguardando atualização'
 
 export const SEED_ORDER_ID = 'CS-2048'
 
@@ -43,54 +39,9 @@ export const INITIAL_PRODUCTS: Product[] = [
   },
 ]
 
-// Raw ordered events for the seed order (titles/details verbatim from the mockup).
-export const SEED_ORDER_EVENTS: Array<{ title: string; detail: string }> = [
-  { title: 'Pedido confirmado', detail: '19 out · 10h12' },
-  { title: 'Em separação', detail: '20 out · 08h35' },
-  { title: 'Em transporte', detail: '21 out · 14h20' },
-  { title: 'Entregue', detail: 'Entrega confirmada' },
-]
-
-/**
- * Build the derived OrderWithEvents shape (status + displayDetail + statusLabel)
- * from the raw order fields. Shared by the seed constant and the offline advance
- * fallback so the derivation never drifts from the server.
- */
-export function buildOrderWithEvents(params: {
-  id: string
-  productId: string
-  productName: string
-  variant: string
-  quantity: number
-  total: number
-  placedAt: string
-  currentStep: number
-  events: Array<{ title: string; detail: string }>
-}): OrderWithEvents {
-  const events: OrderEvent[] = params.events.map((e, i) => ({
-    stepIndex: i,
-    title: e.title,
-    detail: e.detail,
-    displayDetail: i <= params.currentStep ? e.detail : AWAITING_DETAIL,
-    status: i < params.currentStep ? 'done' : i === params.currentStep ? 'current' : 'pending',
-  }))
-
-  return {
-    id: params.id,
-    productId: params.productId,
-    productName: params.productName,
-    variant: params.variant,
-    quantity: params.quantity,
-    total: params.total,
-    placedAt: params.placedAt,
-    currentStep: params.currentStep,
-    statusLabel: events[params.currentStep]?.title ?? '',
-    events,
-  }
-}
-
 // The single seed order, fully renderable so R3-1 can seed React state synchronously.
-export const INITIAL_ORDER: OrderWithEvents = buildOrderWithEvents({
+// statusLabel is the fixed before-state badge (the mockup's hardcoded before mode).
+export const INITIAL_ORDER: OrderWithEvents = {
   id: SEED_ORDER_ID,
   productId: 'prod-orbit',
   productName: 'Orbit Headphones Pro',
@@ -98,9 +49,8 @@ export const INITIAL_ORDER: OrderWithEvents = buildOrderWithEvents({
   quantity: 1,
   total: 699,
   placedAt: '19/10/2026',
-  currentStep: 1,
-  events: SEED_ORDER_EVENTS,
-})
+  statusLabel: 'Pedido confirmado',
+}
 
 // In-memory cache for SSR / fallback.
 let inMemoryProducts: Product[] = [...INITIAL_PRODUCTS]
@@ -170,17 +120,6 @@ export function saveOrder(order: OrderWithEvents): void {
   }
 }
 
-/** Normalize a user/path order id: decode, strip leading '#', trim, uppercase. */
-export function normalizeOrderId(raw: string): string {
-  let value = raw
-  try {
-    value = decodeURIComponent(raw)
-  } catch {
-    value = raw
-  }
-  return value.replace(/^#/, '').trim().toUpperCase()
-}
-
 /* ==================== Backend REST API Calls (SQLite Persisted) ==================== */
 
 export async function fetchProductsApi(): Promise<Product[]> {
@@ -206,58 +145,5 @@ export async function loadOrderApi(id: string): Promise<OrderWithEvents> {
   } catch (e) {
     console.warn(`API /api/orders/${id} unavailable, using fallback data:`, e)
     return getStoredOrder()
-  }
-}
-
-export async function advanceOrderApi(id: string): Promise<OrderWithEvents> {
-  try {
-    const res = await fetch(`/api/orders/${encodeURIComponent(id)}/advance`, { method: 'POST' })
-    if (!res.ok) throw new Error(`HTTP error ${res.status}`)
-    const data = (await res.json()) as OrderWithEvents
-    saveOrder(data)
-    return data
-  } catch (e) {
-    console.warn(`API advance ${id} failed, computing next step locally:`, e)
-    const current = getStoredOrder()
-    const eventCount = current.events.length
-    const nextStep = current.currentStep >= eventCount - 1 ? 0 : current.currentStep + 1
-    const next = buildOrderWithEvents({
-      id: current.id,
-      productId: current.productId,
-      productName: current.productName,
-      variant: current.variant,
-      quantity: current.quantity,
-      total: current.total,
-      placedAt: current.placedAt,
-      currentStep: nextStep,
-      events: current.events.map((ev) => ({ title: ev.title, detail: ev.detail })),
-    })
-    saveOrder(next)
-    return next
-  }
-}
-
-/**
- * Validation-only lookup (useStore() contract): never swaps the displayed order,
- * only returns an { ok, message } pair for the search box. The two pt-BR strings
- * are identical whether served by the API or the offline fallback.
- */
-export async function getOrder(id: string): Promise<{ ok: boolean; message: string }> {
-  const normalized = normalizeOrderId(id)
-  try {
-    const res = await fetch(`/api/orders/${encodeURIComponent(normalized)}`)
-    if (res.ok) {
-      return { ok: true, message: FOUND_MESSAGE }
-    }
-    if (res.status === 404) {
-      return { ok: false, message: NOT_FOUND_MESSAGE }
-    }
-    throw new Error(`HTTP error ${res.status}`)
-  } catch (e) {
-    console.warn(`API lookup ${normalized} failed, using offline validation:`, e)
-    if (normalized === SEED_ORDER_ID) {
-      return { ok: true, message: FOUND_MESSAGE }
-    }
-    return { ok: false, message: NOT_FOUND_MESSAGE }
   }
 }

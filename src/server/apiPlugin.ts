@@ -1,6 +1,6 @@
 import type { Plugin } from 'vite'
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import { getAllProducts, getOrderWithEvents, advanceOrderStep, seedDatabase } from './db'
+import { getAllProducts, getOrderWithEvents, seedDatabase } from './db'
 
 const NOT_FOUND_MESSAGE = 'Pedido não localizado neste ambiente de demonstração.'
 
@@ -35,17 +35,6 @@ export function storeApiPlugin(): Plugin {
       // GET /api/products
       if (/^\/api\/products$/.test(pathname) && method === 'GET') {
         return sendJson(res, 200, getAllProducts())
-      }
-
-      // POST /api/orders/:id/advance (match before the bare :id route)
-      const advanceMatch = pathname.match(/^\/api\/orders\/([^\/]+)\/advance$/)
-      if (advanceMatch && method === 'POST') {
-        const id = normalizeId(advanceMatch[1])
-        const order = advanceOrderStep(id)
-        if (!order) {
-          return sendJson(res, 404, { error: NOT_FOUND_MESSAGE })
-        }
-        return sendJson(res, 200, order)
       }
 
       // GET /api/orders/:id

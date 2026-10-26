@@ -38,23 +38,13 @@ describe('getAllProducts', () => {
 })
 
 describe('getOrderWithEvents', () => {
-  it('returns CS-2048 with 4 events and derived status/displayDetail/statusLabel', () => {
+  it('returns the minimal CS-2048 order with the fixed before-state statusLabel', () => {
     db.seedDatabase()
     const order = db.getOrderWithEvents('CS-2048')
     expect(order).not.toBeNull()
-    expect(order!.events).toHaveLength(4)
-    expect(order!.currentStep).toBe(1)
-    expect(order!.statusLabel).toBe('Em separação')
-
-    const [done, current, pendingA, pendingB] = order!.events
-    expect(done.status).toBe('done')
-    expect(done.displayDetail).toBe('19 out · 10h12')
-    expect(current.status).toBe('current')
-    expect(current.displayDetail).toBe('20 out · 08h35')
-    expect(pendingA.status).toBe('pending')
-    expect(pendingA.displayDetail).toBe('Aguardando atualização')
-    expect(pendingB.status).toBe('pending')
-    expect(pendingB.displayDetail).toBe('Aguardando atualização')
+    expect(order!.id).toBe('CS-2048')
+    expect(order!.productName).toBe('Orbit Headphones Pro')
+    expect(order!.statusLabel).toBe('Pedido confirmado')
   })
 
   it('returns null for an unknown order id', () => {
@@ -62,26 +52,11 @@ describe('getOrderWithEvents', () => {
   })
 })
 
-describe('advanceOrderStep', () => {
-  it('increments the step and wraps 3 -> 0', () => {
-    db.seedDatabase() // currentStep = 1
-    expect(db.advanceOrderStep('CS-2048')!.currentStep).toBe(2)
-    expect(db.advanceOrderStep('CS-2048')!.currentStep).toBe(3)
-    // last step wraps back to 0
-    expect(db.advanceOrderStep('CS-2048')!.currentStep).toBe(0)
-  })
-
-  it('returns null when the order is missing', () => {
-    expect(db.advanceOrderStep('NOPE')).toBeNull()
-  })
-})
-
 describe('seedDatabase', () => {
   it('is idempotent on reset', () => {
-    db.advanceOrderStep('CS-2048')
     db.seedDatabase()
     const order = db.getOrderWithEvents('CS-2048')
-    expect(order!.currentStep).toBe(1)
+    expect(order!.id).toBe('CS-2048')
     expect(db.getAllProducts()).toHaveLength(3)
   })
 })

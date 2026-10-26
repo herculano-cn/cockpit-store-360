@@ -1,6 +1,6 @@
 import express from 'express'
 import path from 'node:path'
-import { getAllProducts, getOrderWithEvents, advanceOrderStep, seedDatabase } from './db'
+import { getAllProducts, getOrderWithEvents, seedDatabase } from './db'
 
 const NOT_FOUND_MESSAGE = 'Pedido não localizado neste ambiente de demonstração.'
 
@@ -31,19 +31,6 @@ export function createApiRouter() {
   router.get('/orders/:id', (req, res) => {
     try {
       const order = getOrderWithEvents(normalizeId(req.params.id))
-      if (!order) {
-        return res.status(404).json({ error: NOT_FOUND_MESSAGE })
-      }
-      res.json(order)
-    } catch (err: any) {
-      res.status(500).json({ error: err.message })
-    }
-  })
-
-  // POST /api/orders/:id/advance
-  router.post('/orders/:id/advance', (req, res) => {
-    try {
-      const order = advanceOrderStep(normalizeId(req.params.id))
       if (!order) {
         return res.status(404).json({ error: NOT_FOUND_MESSAGE })
       }
